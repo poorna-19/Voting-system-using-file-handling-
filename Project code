@@ -1,0 +1,221 @@
+#include <iostream>
+#include <string>
+#include <fstream>
+#include <vector>
+#include <map>
+#include <set>
+using namespace std;
+
+class Person {
+private:
+    string name;
+    string role;  
+public:
+    Person(const string& name = "", const string& role = "") : name(name), role(role) {}
+
+    void registerPerson(const string& name, const string& role) {
+        this->name = name;
+        this->role = role;
+        ofstream file("registration.txt", ios::app);
+        if (file.is_open()) {
+            file << name << " " << role << endl;
+            file.close();
+        }
+        cout << name << " registered as a " << role << "." << endl;
+    }
+
+    string getName() const { return name; }
+    string getRole() const { return role; }
+};
+
+void loadRegisteredUsers(vector<Person>& leaders, vector<Person>& candidates) {
+    ifstream file("registration.txt");
+    if (!file.is_open()) {
+        cout << "No registration data found." << endl;
+        return;
+    }
+
+    string name, role;
+    while (file >> name >> role) {
+        Person person(name, role);
+        if (role == "leader") {
+            leaders.push_back(person);
+        } else if (role == "candidate") {
+            candidates.push_back(person);
+        }
+    }
+    file.close();
+}
+
+bool isRegistered(const string& name) {
+    ifstream file("registration.txt");
+    string regName, regRole;
+    while (file >> regName >> regRole) {
+        if (regName == name) {
+            return true; 
+        }
+    }
+    return false; 
+}
+
+bool hasVoted(const string& name) {
+    ifstream voteFile("votes.txt");
+    string voterName, vote, leaderName;
+    while (voteFile >> voterName >> vote >> leaderName) {
+        if (voterName == name) {
+            return true; 
+        }
+    }
+    return false; 
+}
+
+void castVote(vector<Person>& leaders) {
+    string voterName, leaderName;
+    cin.ignore(); 
+    cout << "Enter your name to vote: ";
+    getline(cin, voterName);
+
+    if (!isRegistered(voterName)) {
+        cout << "Your name is not registered to vote." << endl;
+        return;
+    }
+
+    
+    if (hasVoted(voterName)) {
+        cout << "You have already cast your vote." << endl;
+        return;
+    }
+
+    
+    cout << "\nAvailable leaders to vote for:\n";
+    for (int i = 0; i < leaders.size(); i++) {
+        cout << "- " << leaders[i].getName() << endl;
+    }
+
+    cout << "Enter the name of the leader you want to vote for: ";
+    getline(cin, leaderName);
+
+    ofstream voteFile("votes.txt", ios::app);
+    if (voteFile.is_open()) {
+        voteFile << voterName << " voted for " << leaderName << endl;
+        voteFile.close();
+        cout << "Vote cast successfully for " << leaderName << "." << endl;
+    } else {
+        cout << "Unable to record vote." << endl;
+    }
+}
+
+void declareResults() {
+    ifstream voteFile("votes.txt");
+    if (!voteFile.is_open()) {
+        cout << "No votes recorded yet." << endl;
+        return;
+    }
+
+    map<string, int> voteCount;
+    string voterName, vote, leaderName;
+
+    while (voteFile >> voterName >> vote >> vote >> leaderName) {
+        voteCount[leaderName]++;
+    }
+    voteFile.close();
+
+    cout << "\n======= Election Results =======\n";
+    int maxVotes = 0;
+
+    
+    for (map<string, int>::iterator it = voteCount.begin(); it != voteCount.end(); ++it) {
+        cout << it->first << " received " << it->second << " votes." << endl;
+        if (it->second > maxVotes) {
+            maxVotes = it->second;
+        }
+    }
+
+    
+    vector<string> winners;
+    for (map<string, int>::iterator it = voteCount.begin(); it != voteCount.end(); ++it) {
+        if (it->second == maxVotes) {
+            winners.push_back(it->first);
+        }
+    }
+
+    if (!winners.empty()) {
+        if (winners.size() == 1) {
+            cout << "\nThe winner is " << winners[0] << " with " << maxVotes << " votes!" << endl;
+        } else {
+            cout << "\nIt's a tie! The winners with " << maxVotes << " votes each are:\n";
+            for (size_t i = 0; i < winners.size(); ++i) {
+                cout << "- " << winners[i] << endl;
+            }
+        }
+    } else {
+        cout << "No votes cast." << endl;
+    }
+}
+
+
+
+
+
+void registerUser(vector<Person>& leaders, vector<Person>& candidates) {
+    string name, role;
+    cout << "Enter name to register: ";
+    cin.ignore();
+    getline(cin, name);
+
+    cout << "Enter role (leader/candidate): ";
+    getline(cin, role);
+
+    Person person(name, role);
+    person.registerPerson(name, role);
+
+    if (role == "leader") {
+        leaders.push_back(person);
+    } else if (role == "candidate") {
+        candidates.push_back(person);
+    } else {
+        cout << "Invalid role. Registration failed." << endl;
+    }
+}
+
+int main() {
+    vector<Person> leaders;
+    vector<Person> candidates;
+
+    
+    loadRegisteredUsers(leaders, candidates);
+
+    int choice;
+    do {
+        cout << "\n=========== Election System ===========\n";
+        cout << "1. Register\n";
+        cout << "2. Cast Vote\n";
+        cout << "3. Declare Results\n";
+        cout << "4. Exit\n";
+        cout << "Enter your choice: ";
+        cin >> choice;
+
+        switch (choice) {
+            case 1:
+                registerUser(leaders, candidates);
+                break;
+            case 2:
+                if (leaders.empty()) {
+                    cout << "No leaders available to vote for. Register leaders first." << endl;
+                } else {
+                    castVote(leaders);
+                }
+                break;
+            case 3:
+                declareResults();
+                break;
+            case 4:
+                cout << "Exiting the election system..." << endl;
+                break;
+            default:
+                cout << "Invalid choice. Please try again." << endl;
+        }
+    } while (choice != 4);
+
+    return 0;
+}
